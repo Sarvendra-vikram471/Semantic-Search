@@ -118,19 +118,39 @@ class SearchEngine:
             "results": final,
         }
 
-
 if __name__ == "__main__":
     engine = SearchEngine()
-    output = engine.search("quarterly budget report", top_k=3)
 
-    print(f"Query     : {output['query_info']['original']}")
-    print(f"Expanded  : {output['query_info']['expanded']}")
-    print(f"Results   : {len(output['results'])}\n")
+    while True:
+        query = input("\n🔍 Enter your search query (or type 'exit'): ")
 
-    for i, r in enumerate(output["results"], 1):
-        print(f"--- Result {i} ---")
-        print(f"File     : {r['filepath']}")
-        print(f"Preview  : {r['preview']}")
-        print(f"RRF      : {r.get('rrf_score', 'n/a'):.5f}")
-        print(f"Rerank   : {r.get('rerank_score', 'n/a'):.4f}")
-        print()
+        if query.lower() == "exit":
+            print("Exiting search engine...")
+            break
+
+        output = engine.search(query, top_k=3)
+
+        print(f"\nQuery     : {output['query_info']['original']}")
+        print(f"Expanded  : {output['query_info']['expanded']}")
+        print(f"Results   : {len(output['results'])}\n")
+
+        for i, r in enumerate(output["results"], 1):
+            print(f"--- Result {i} ---")
+            print(f"File     : {r['filepath']}")
+            print(f"Preview  : {r['preview']}")
+
+            # Handle safe printing of scores
+            rrf = r.get('rrf_score')
+            rerank = r.get('rerank_score')
+
+            if rrf is not None:
+                print(f"RRF      : {rrf:.5f}")
+            else:
+                print("RRF      : n/a")
+
+            if rerank is not None:
+                print(f"Rerank   : {rerank:.4f}")
+            else:
+                print("Rerank   : n/a")
+
+            print()
