@@ -48,3 +48,9 @@ typer==0.24.1
 typing_extensions==4.15.0
 watchdog==6.0.0
 xlsxwriter==3.2.9
+# add these
+nltk          # WordNet query expansion
+rank-bm25     # optional, but our SparseRetriever is self-contained
+fastapi       # phase 4 API
+uvicorn       # phase 4 API server
+typer         # phase 4 CLI
