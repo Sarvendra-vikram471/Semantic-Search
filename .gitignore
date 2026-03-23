@@ -1,13 +1,27 @@
 # Virtual environment
 .venv/
 
-# Index data (generated at runtime)
+# Vector index and database (large binary files)
 data/
+results/
+
+# Logs
+*.log
+
+# Downloaded ML models (auto-downloaded at runtime)
+models/
+.cache/
+sentence_transformers/
 
 # Python cache
-__pycache__/
+___pycache__/
 *.pyc
-
+*.pyo
+*.pyd
+.env
+venv/
+env/
+.venv/
 # Model cache
 .cache/
 
