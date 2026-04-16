@@ -1,60 +1,21 @@
-annotated-doc==0.0.4
-anyio==4.12.1
-certifi==2026.2.25
-click==8.3.1
-colorama==0.4.6
-et_xmlfile==2.0.0
-faiss-cpu==1.13.2
-filelock==3.25.2
-fsspec==2026.2.0
-h11==0.16.0
-hf-xet==1.4.2
-httpcore==1.0.9
-httpx==0.28.1
-huggingface_hub==1.7.1
-idna==3.11
-Jinja2==3.1.6
-joblib==1.5.3
-lxml==6.0.2
-markdown-it-py==4.0.0
-MarkupSafe==3.0.3
-mdurl==0.1.2
-mpmath==1.3.0
-networkx==3.6.1
-numpy==2.4.3
-openpyxl==3.1.5
-packaging==26.0
-pillow==12.1.1
-Pygments==2.19.2
-PyMuPDF==1.27.2
-python-docx==1.2.0
-python-pptx==1.0.2
-PyYAML==6.0.3
-regex==2026.2.28
-rich==14.3.3
-safetensors==0.7.0
-scikit-learn==1.8.0
-scipy==1.17.1
-sentence-transformers==5.3.0
-setuptools==82.0.1
-shellingham==1.5.4
-sympy==1.14.0
-threadpoolctl==3.6.0
-tokenizers==0.22.2
-torch==2.10.0
-tqdm==4.67.3
-transformers==5.3.0
-typer==0.24.1
-typing_extensions==4.15.0
-watchdog==6.0.0
-xlsxwriter==3.2.9
-# add these
-nltk          # WordNet query expansion
-rank-bm25     # optional, but our SparseRetriever is self-contained
-fastapi       # phase 4 API
-uvicorn       # phase 4 API server
-typer         # phase 4 CLI
 fastapi
 uvicorn
 jinja2
 python-multipart
+sentence-transformers
+transformers
+torch
+faiss-cpu
+numpy
+scipy
+scikit-learn
+networkx
+nltk
+pandas
+pyyaml
+python-docx
+python-pptx
+openpyxl
+pillow
+lxml
+PyMuPDF

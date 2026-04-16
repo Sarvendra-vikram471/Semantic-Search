@@ -1,6 +1,7 @@
 # Directories to index
 watch_paths:
-  - "E:/college material/3rd yeart/6thsem/computer network"  #modify this
+  - ./data/scifact
+  - ./data/nfcorpus #modify this
 
 # File extensions to include
 include_extensions:

@@ -1,5 +1,6 @@
 # searcher/dense_retriever.py
 
+import os
 import numpy as np
 import faiss
 import sqlite3
@@ -26,7 +27,14 @@ class DenseRetriever:
         self.top_k = config.get("top_k", 20)  # fetch more than needed; reranker will trim
 
         self.embedder = Embedder(config_path)
-        self.index = faiss.read_index(self.faiss_path)
+        self.index = None
+        if os.path.exists(self.faiss_path):
+            self.index = faiss.read_index(self.faiss_path)
+        else:
+            print(
+                f"[DenseRetriever] No FAISS index found at {self.faiss_path}; "
+                "dense retrieval is disabled until indexing finishes."
+            )
 
     def retrieve(self, query: str, top_k: int = None) -> list[dict]:
         """
@@ -42,6 +50,8 @@ class DenseRetriever:
                 dense_score (float, lower = more similar in L2 space)
         """
         k = top_k or self.top_k
+        if self.index is None:
+            return []
 
         query_vec = self.embedder.embed_single(query)
         query_vec = np.array([query_vec], dtype="float32")

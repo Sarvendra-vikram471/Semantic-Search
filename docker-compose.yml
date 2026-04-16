@@ -1,0 +1,16 @@
+services:
+  semantic-search:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic-search
+    ports:
+      - "7860:7860"
+    environment:
+      NLTK_DATA: /usr/local/share/nltk_data
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./data:/app/data
+      - ./results:/app/results
+      - ./documents:/documents
+    restart: unless-stopped

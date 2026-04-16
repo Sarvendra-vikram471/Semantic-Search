@@ -3,13 +3,13 @@
 import json
 import os
 import time
+from functools import lru_cache
 import yaml
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from searcher.search_engine import SearchEngine
 from evaluation.dataset_loader import DatasetLoader
 
 app = FastAPI(title="Semantic Search Engine")
@@ -18,11 +18,20 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # ── load search engine once at startup ──────────────────────────────────────
-def get_engine():
-    from searcher.search_engine import SearchEngine
-    return SearchEngine("config.yaml")
+ENGINE_ERROR = None
 
-engine = get_engine()
+
+@lru_cache(maxsize=1)
+def get_engine():
+    global ENGINE_ERROR
+    try:
+        from searcher.search_engine import SearchEngine
+        ENGINE_ERROR = None
+        return SearchEngine("config.yaml")
+    except Exception as e:
+        ENGINE_ERROR = str(e)
+        print(f"[Startup] Search engine unavailable: {e}")
+        return None
 
 
 # ── load dataset queries at startup ─────────────────────────────────────────
@@ -163,10 +172,11 @@ def find_matching_dataset_queries(
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("index.html", {
+    return templates.TemplateResponse(request, "index.html", {
         "request":          request,
         "scifact_count":    len(DATASET_QUERIES.get("scifact",  {})),
         "nfcorpus_count":   len(DATASET_QUERIES.get("nfcorpus", {})),
+        "error":            ENGINE_ERROR,
     })
 
 
@@ -178,9 +188,23 @@ async def search(
     mode:    str = Form("full"),
 ):
     if not query.strip():
-        return templates.TemplateResponse("index.html", {
-            "request": request,
-            "error":   "Please enter a search query.",
+        return templates.TemplateResponse(request, "index.html", {
+            "request":        request,
+            "error":          "Please enter a search query.",
+            "scifact_count":  len(DATASET_QUERIES.get("scifact", {})),
+            "nfcorpus_count": len(DATASET_QUERIES.get("nfcorpus", {})),
+        })
+
+    engine = get_engine()
+    if engine is None:
+        return templates.TemplateResponse(request, "index.html", {
+            "request":        request,
+            "error":          (
+                "Search is not ready yet. The semantic index is still missing or failed to build. "
+                f"Startup details: {ENGINE_ERROR}"
+            ),
+            "scifact_count":  len(DATASET_QUERIES.get("scifact", {})),
+            "nfcorpus_count": len(DATASET_QUERIES.get("nfcorpus", {})),
         })
 
     t0      = time.time()
@@ -216,7 +240,7 @@ async def search(
     matched_scifact  = [q for q in matched_queries if q["dataset"] == "scifact"]
     matched_nfcorpus = [q for q in matched_queries if q["dataset"] == "nfcorpus"]
 
-    return templates.TemplateResponse("results.html", {
+    return templates.TemplateResponse(request, "results.html", {
         "request":          request,
         "query":            query,
         "results":          results,
@@ -226,6 +250,8 @@ async def search(
         "top_k":            top_k,
         "matched_scifact":  matched_scifact,
         "matched_nfcorpus": matched_nfcorpus,
+        "scifact_matches":  matched_scifact,
+        "nfcorpus_matches": matched_nfcorpus,
         "total_matched":    len(matched_queries),
     })
 
@@ -248,7 +274,7 @@ async def dashboard(request: Request):
             "modes":     mode_results,
         })
 
-    return templates.TemplateResponse("dashboard.html", {
+    return templates.TemplateResponse(request, "dashboard.html", {
         "request":  request,
         "datasets": datasets,
     })
@@ -256,12 +282,17 @@ async def dashboard(request: Request):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    engine = get_engine()
+    return {
+        "status": "ok" if engine is not None else "degraded",
+        "engine_ready": engine is not None,
+        "engine_error": ENGINE_ERROR,
+    }
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=7860, reload=True)
 
 
 
