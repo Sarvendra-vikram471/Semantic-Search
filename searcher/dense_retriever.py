@@ -18,10 +18,13 @@ class DenseRetriever:
     """
 
     def __init__(self, config_path="config.yaml"):
+        config_path = os.path.abspath(config_path)
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
-        self.data_dir = config["data_dir"]
+        config_dir = os.path.dirname(config_path)
+        data_dir = config["data_dir"]
+        self.data_dir = data_dir if os.path.isabs(data_dir) else os.path.normpath(os.path.join(config_dir, data_dir))
         self.faiss_path = f"{self.data_dir}/index.faiss"
         self.db_path = f"{self.data_dir}/metadata.db"
         self.top_k = config.get("top_k", 20)  # fetch more than needed; reranker will trim

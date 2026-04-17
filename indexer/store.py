@@ -28,10 +28,13 @@ class Store:
         """
         Load config, set up file paths, initialize FAISS index and SQLite.
         """
+        config_path = os.path.abspath(config_path)
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
 
-        self.data_dir = config["data_dir"]
+        config_dir = os.path.dirname(config_path)
+        data_dir = config["data_dir"]
+        self.data_dir = data_dir if os.path.isabs(data_dir) else os.path.normpath(os.path.join(config_dir, data_dir))
         os.makedirs(self.data_dir, exist_ok=True)
 
         self.faiss_path = os.path.join(self.data_dir, "index.faiss")

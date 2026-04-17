@@ -12,10 +12,13 @@ from fastapi.templating import Jinja2Templates
 
 from evaluation.dataset_loader import DatasetLoader
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
+
 app = FastAPI(title="Semantic Search Engine")
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 # ── load search engine once at startup ──────────────────────────────────────
 ENGINE_ERROR = None
@@ -27,11 +30,22 @@ def get_engine():
     try:
         from searcher.search_engine import SearchEngine
         ENGINE_ERROR = None
-        return SearchEngine("config.yaml")
+        return SearchEngine(CONFIG_PATH)
     except Exception as e:
         ENGINE_ERROR = str(e)
         print(f"[Startup] Search engine unavailable: {e}")
         return None
+
+
+def resolve_path(path: str) -> str:
+    if os.path.isabs(path):
+        return path
+    return os.path.join(BASE_DIR, path)
+
+
+def get_config() -> dict:
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
 # ── load dataset queries at startup ─────────────────────────────────────────
@@ -50,9 +64,11 @@ def load_dataset_queries() -> dict:
     """
     all_queries = {}
 
+    config = get_config()
+    watch_paths = config.get("watch_paths", [])
     datasets = {
-        "scifact":  "data/scifact",
-        "nfcorpus": "data/nfcorpus",
+        "scifact":  resolve_path(watch_paths[0]) if len(watch_paths) > 0 else resolve_path("data/scifact"),
+        "nfcorpus": resolve_path(watch_paths[1]) if len(watch_paths) > 1 else resolve_path("data/nfcorpus"),
     }
 
     for name, path in datasets.items():
@@ -72,17 +88,58 @@ def load_dataset_queries() -> dict:
 
 
 # load once at startup — available globally
-DATASET_QUERIES = load_dataset_queries()
+DATASET_QUERIES = {}
+
+
+@app.on_event("startup")
+async def startup_event():
+    refresh_dataset_queries()
+    ensure_index_ready()
+    get_engine.cache_clear()
+    get_engine()
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def load_eval_results() -> dict:
-    path = "results/eval_all.json"
+    path = resolve_path("results/eval_all.json")
     if os.path.exists(path):
         with open(path, "r") as f:
             return json.load(f)
     return {}
+
+
+def refresh_dataset_queries() -> None:
+    global DATASET_QUERIES
+    DATASET_QUERIES = load_dataset_queries()
+
+
+def ensure_index_ready() -> None:
+    config = get_config()
+    data_dir = resolve_path(config["data_dir"])
+    faiss_path = os.path.join(data_dir, "index.faiss")
+
+    if os.path.exists(faiss_path):
+        print(f"[Startup] Existing FAISS index found at {faiss_path}")
+        return
+
+    watch_paths = [resolve_path(path) for path in config.get("watch_paths", [])]
+    available_paths = [path for path in watch_paths if os.path.exists(path)]
+
+    if not available_paths:
+        print("[Startup] Skipping indexing because no configured dataset paths are available.")
+        return
+
+    print("[Startup] No FAISS index found. Running indexing pipeline...")
+    from indexer.pipeline import IndexingPipeline
+
+    pipeline = IndexingPipeline(CONFIG_PATH)
+    pipeline.run()
+
+    if os.path.exists(faiss_path):
+        print(f"[Startup] Index build complete: {faiss_path}")
+    else:
+        print(f"[Startup] Index build did not produce {faiss_path}")
 
 
 def extract_doc_id(filepath: str) -> str:

@@ -1,5 +1,6 @@
 # searcher/sparse_retriever.py
 
+import os
 import sqlite3
 import math
 import yaml
@@ -20,23 +21,32 @@ class SparseRetriever:
     """
 
     def __init__(self, config_path="config.yaml"):
+        config_path = os.path.abspath(config_path)
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
-        self.db_path = f"{config['data_dir']}/metadata.db"
+        config_dir = os.path.dirname(config_path)
+        data_dir = config["data_dir"]
+        self.data_dir = data_dir if os.path.isabs(data_dir) else os.path.normpath(os.path.join(config_dir, data_dir))
+        self.db_path = f"{self.data_dir}/metadata.db"
         self.k1 = 1.5   # term frequency saturation
         self.b = 0.75   # length normalisation
 
         # Build in-memory BM25 index from SQLite on startup
         self._corpus = []       # list of (chunk_id, token_list)
         self._avgdl = 0.0
+        self._N = 0
         self._df = defaultdict(int)   # term → doc frequency
         self._build_index()
 
     def _build_index(self):
         """Load all chunks from SQLite and compute BM25 statistics."""
+        os.makedirs(self.data_dir, exist_ok=True)
         conn = sqlite3.connect(self.db_path)
-        rows = conn.execute("SELECT id, chunk_text FROM chunks").fetchall()
+        try:
+            rows = conn.execute("SELECT id, chunk_text FROM chunks").fetchall()
+        except sqlite3.OperationalError:
+            rows = []
         conn.close()
 
         total_len = 0
@@ -66,6 +76,9 @@ class SparseRetriever:
         Returns:
             list[dict] with chunk_id and sparse_score, sorted descending
         """
+        if not self._corpus:
+            return []
+
         query_terms = query.lower().split()
         scores = {}
 

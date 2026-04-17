@@ -15,13 +15,19 @@ class Crawler:
         """
         Load the config file and store the settings as instance variables.
         """
+        config_path = os.path.abspath(config_path)
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
-        
-        self.watch_paths = config["watch_paths"]
+
+        config_dir = os.path.dirname(config_path)
+        self.watch_paths = [
+            path if os.path.isabs(path) else os.path.normpath(os.path.join(config_dir, path))
+            for path in config["watch_paths"]
+        ]
         self.include_extensions = config["include_extensions"]
         self.skip_directories = config["skip_directories"]
-        self.data_dir = config["data_dir"]
+        data_dir = config["data_dir"]
+        self.data_dir = data_dir if os.path.isabs(data_dir) else os.path.normpath(os.path.join(config_dir, data_dir))
 
     def discover_files(self):
         """
