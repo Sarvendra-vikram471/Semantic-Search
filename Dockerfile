@@ -16,6 +16,7 @@ RUN pip install --upgrade pip && \
 COPY . .
 
 RUN mkdir -p /app/data /app/results
+RUN python download_beir_datasets.py
 
 EXPOSE 7860
 
