@@ -12,4 +12,8 @@ __pycache__/
 .idea/
 .vscode/
 data/
-results/
+results/*
+!results/eval_all.json
+!results/eval_report.json
+!results/eval_scifact.json
+!results/eval_nfcorpus.json

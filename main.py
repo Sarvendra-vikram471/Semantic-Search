@@ -102,10 +102,53 @@ async def startup_event():
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def load_eval_results() -> dict:
-    path = resolve_path("results/eval_all.json")
-    if os.path.exists(path):
-        with open(path, "r") as f:
-            return json.load(f)
+    results_dir = resolve_path("results")
+    candidate_files = [
+        os.path.join(results_dir, "eval_all.json"),
+        os.path.join(results_dir, "eval_report.json"),
+    ]
+
+    for path in candidate_files:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            if path.endswith("eval_all.json"):
+                return data
+
+            # Single-dataset reports use mode->metrics shape. Wrap them so the
+            # dashboard can render them like the combined eval output.
+            if isinstance(data, dict) and any(
+                key in data for key in ("full", "dense", "sparse", "hybrid")
+            ):
+                return {"report": data}
+
+    if os.path.isdir(results_dir):
+        merged = {}
+        for filename in sorted(os.listdir(results_dir)):
+            if not (filename.startswith("eval_") and filename.endswith(".json")):
+                continue
+            if filename in {"eval_all.json", "eval_report.json"}:
+                continue
+
+            dataset_name = filename[len("eval_"):-len(".json")]
+            path = os.path.join(results_dir, filename)
+
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception as e:
+                print(f"[Dashboard] Could not load {path}: {e}")
+                continue
+
+            if isinstance(data, dict):
+                merged[dataset_name] = data
+
+        if merged:
+            print(f"[Dashboard] Loaded evaluation data from {len(merged)} per-dataset report(s)")
+            return merged
+
+    print(f"[Dashboard] No evaluation results found in {results_dir}")
     return {}
 
 
