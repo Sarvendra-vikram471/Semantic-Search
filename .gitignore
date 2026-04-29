@@ -14,7 +14,7 @@ models/
 sentence_transformers/
 
 # Python cache
-___pycache__/
+__pycache__/
 *.pyc
 *.pyo
 *.pyd

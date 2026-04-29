@@ -4,8 +4,9 @@ import json
 import os
 import time
 from functools import lru_cache
+from urllib.parse import quote
 import yaml
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -89,6 +90,22 @@ def load_dataset_queries() -> dict:
 
 # load once at startup — available globally
 DATASET_QUERIES = {}
+
+
+@lru_cache(maxsize=8)
+def load_dataset_corpus(dataset_name: str) -> dict:
+    config = get_config()
+    watch_paths = config.get("watch_paths", [])
+    datasets = {
+        "scifact":  resolve_path(watch_paths[0]) if len(watch_paths) > 0 else resolve_path("data/scifact"),
+        "nfcorpus": resolve_path(watch_paths[1]) if len(watch_paths) > 1 else resolve_path("data/nfcorpus"),
+    }
+
+    dataset_path = datasets.get(dataset_name)
+    if not dataset_path or not os.path.exists(dataset_path):
+        return {}
+
+    return DatasetLoader(dataset_path).load_corpus()
 
 
 @app.on_event("startup")
@@ -206,6 +223,14 @@ def get_file_icon(filepath: str) -> str:
         "pptx": "📊", "xlsx": "📋", "py": "🐍",
     }
     return icons.get(ext, "📄")
+
+
+def build_open_url(filepath: str) -> str:
+    dataset = get_dataset_from_filepath(filepath)
+    if dataset in {"scifact", "nfcorpus"}:
+        doc_id = extract_doc_id(filepath)
+        return f"/document?dataset={quote(dataset)}&doc_id={quote(doc_id)}"
+    return f"/document?path={quote(filepath)}"
 
 
 def find_matching_dataset_queries(
@@ -327,6 +352,7 @@ async def search(
         results.append({
             "doc_id":   doc_id,
             "filepath": filepath,
+            "open_url": build_open_url(filepath),
             "score":    round(float(score), 4),
             "snippet":  snippet,
             "icon":     get_file_icon(filepath),
@@ -378,6 +404,52 @@ async def dashboard(request: Request):
         "request":  request,
         "datasets": datasets,
     })
+
+
+@app.get("/document", response_class=HTMLResponse)
+async def document(
+    request: Request,
+    dataset: str | None = Query(default=None),
+    doc_id: str | None = Query(default=None),
+    path: str | None = Query(default=None),
+):
+    if dataset and doc_id:
+        corpus = load_dataset_corpus(dataset)
+        doc = corpus.get(doc_id)
+        if doc is None:
+            raise HTTPException(status_code=404, detail="Document not found in dataset corpus.")
+
+        title = doc.get("title") or doc_id
+        text = doc.get("text") or "No document text available."
+        return templates.TemplateResponse(request, "document.html", {
+            "request": request,
+            "title": title,
+            "doc_id": doc_id,
+            "source": dataset,
+            "filepath": f"{dataset}://{doc_id}",
+            "text": text,
+            "is_dataset": True,
+        })
+
+    if path:
+        from indexer.extractor import Extractor
+
+        resolved = resolve_path(path)
+        if not os.path.exists(resolved):
+            raise HTTPException(status_code=404, detail="File path no longer exists on disk.")
+
+        text = Extractor().extract(resolved) or "No text could be extracted from this file."
+        return templates.TemplateResponse(request, "document.html", {
+            "request": request,
+            "title": os.path.basename(resolved),
+            "doc_id": os.path.basename(resolved),
+            "source": "filesystem",
+            "filepath": resolved,
+            "text": text,
+            "is_dataset": False,
+        })
+
+    raise HTTPException(status_code=400, detail="Provide either dataset/doc_id or path.")
 
 
 @app.get("/health")

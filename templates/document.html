@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="brand">Semantic Search</a>
+    <a href="/">Search</a>
+    <a href="/dashboard">Dashboard</a>
+</nav>
+
+<main class="container">
+    <article class="document-view">
+        <div class="document-header">
+            <a class="back-link" href="javascript:history.back()">Back to results</a>
+            <div class="document-source">{{ source }}</div>
+            <h1>{{ title }}</h1>
+            <div class="document-path">{{ filepath }}</div>
+        </div>
+
+        <pre class="document-text">{{ text }}</pre>
+    </article>
+</main>
+
+</body>
+</html>

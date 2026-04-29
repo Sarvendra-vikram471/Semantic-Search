@@ -194,12 +194,15 @@ nav a:hover { color: #fff; }
 
 /* RESULT CARD */
 .result-card {
+    display: block;
     background: #fff;
     border-radius: 8px;
     padding: 1rem 1.2rem;
     margin-bottom: 0.8rem;
     box-shadow: 0 1px 6px rgba(0,0,0,0.06);
     border-left: 3px solid #1a3a5c;
+    color: inherit;
+    text-decoration: none;
     transition: box-shadow 0.15s;
 }
 .result-card:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.1); }
@@ -293,6 +296,52 @@ nav a:hover { color: #fff; }
     font-size: 0.78rem;
     color: #888;
     line-height: 1.55;
+}
+
+/* DOCUMENT VIEW */
+.document-view {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+.document-header {
+    border-bottom: 1px solid #e0e8f0;
+    padding: 1.2rem 1.4rem;
+}
+.back-link {
+    color: #1a3a5c;
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    text-decoration: none;
+}
+.back-link:hover { text-decoration: underline; }
+.document-source {
+    color: #777;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.document-header h1 {
+    color: #1a3a5c;
+    font-size: 1.25rem;
+    line-height: 1.35;
+    margin: 0.25rem 0;
+}
+.document-path {
+    color: #999;
+    font-size: 0.82rem;
+    word-break: break-all;
+}
+.document-text {
+    color: #333;
+    font: inherit;
+    line-height: 1.65;
+    padding: 1.4rem;
+    white-space: pre-wrap;
 }
 
 /* DASHBOARD */
